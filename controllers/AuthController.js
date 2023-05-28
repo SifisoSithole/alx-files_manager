@@ -12,16 +12,18 @@ function hashPassword(password) {
   return hashedPassword;
 }
 
-export default class UsersController {
+export default class AuthController {
   static async getConnect(req, res) {
     const authorizationHeader = req.headers.authorization;
     const encodedString = authorizationHeader.split(' ')[1];
     const decodedString = Buffer.from(encodedString, 'base64').toString('utf-8');
     const [email, password] = decodedString.split(':');
     const collection = dbClient.client.db().collection('users');
+    console.log(email);
     const user = await collection.find({ email }).toArray();
+    console.log(user);
     if (user.length === 0) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized4' });
       return;
     }
     const hashedPassword = hashPassword(password);
