@@ -19,11 +19,10 @@ export default class AuthController {
     const decodedString = Buffer.from(encodedString, 'base64').toString('utf-8');
     const [email, password] = decodedString.split(':');
     const collection = dbClient.client.db().collection('users');
-    console.log(email);
     const user = await collection.find({ email }).toArray();
     console.log(user);
     if (user.length === 0) {
-      res.status(401).json({ error: 'Unauthorized4' });
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
     const hashedPassword = hashPassword(password);
