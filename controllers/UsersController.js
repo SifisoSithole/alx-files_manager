@@ -1,5 +1,7 @@
 import dbClient from '../utils/db';
+import redisClient from '../utils/redis';
 
+const { ObjectID } = require('mongodb');
 const crypto = require('crypto');
 
 function hashPassword(password) {
@@ -9,7 +11,7 @@ function hashPassword(password) {
   return hashedPassword;
 }
 
-export default class UsersController {
+export default class UserController {
   static async postNew(req, res) {
     const formData = req.body;
     const { email } = formData;
@@ -42,5 +44,17 @@ export default class UsersController {
       id: id.insertedId,
       email,
     });
+  }
+
+  static async getMe(req, res) {
+    const token = req.headers['x-token'];
+    const userId = await redisClient.get(`auth_${token}`);
+    const collection = dbClient.client.db().collection('users');
+    const user = await collection.findOne({ _id: new ObjectID(userId) });
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    res.status(200).json({ id: `${user._id}`, email: `${user.email}` });
   }
 }
