@@ -47,10 +47,7 @@ export default class UserController {
   }
 
   static async getMe(req, res) {
-    const token = req.headers['x-token'];
-    const userId = await redisClient.get(`auth_${token}`);
-    const collection = dbClient.client.db().collection('users');
-    const user = await collection.findOne({ _id: new ObjectID(userId) });
+    const user = await dbClient.getUserFromToken(req.headers['x-token']);
     if (!user) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
