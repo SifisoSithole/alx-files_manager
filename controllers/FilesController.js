@@ -8,9 +8,9 @@ const { ObjectID } = require('mongodb');
 export default class FilesController {
   static async postUpload(req, res) {
     const token = req.headers['x-token'];
-    const userId = await redisClient.get(`auth_${token}`);
+    const userId = new ObjectID(await redisClient.get(`auth_${token}`));
     const collection = dbClient.client.db().collection('users');
-    const user = await collection.findOne({ _id: new ObjectID(userId) });
+    const user = await collection.findOne({ _id: userId });
     if (!user) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
@@ -29,8 +29,9 @@ export default class FilesController {
       return;
     }
     const fileCollection = dbClient.client.db().collection('files');
-    if (formData.parentId) {
-      const file = await fileCollection.findOne({ _id: new ObjectID(formData.parentId) });
+    if (formData.parentId && formData.parentId !== '0') {
+      formData.parentId = new ObjectID(formData.parentId);
+      const file = await fileCollection.findOne({ _id: formData.parentId });
       if (!file) {
         res.status(400).json({ error: 'Parent not found' });
         return;
@@ -43,7 +44,7 @@ export default class FilesController {
       formData.isPublic = false;
     }
     if (!formData.parentId) {
-      formData.parentId = 0;
+      formData.parentId = '0';
     }
     formData.userId = userId;
     if (formData.type === 'folder') {
@@ -60,6 +61,7 @@ export default class FilesController {
     } else {
       const filePath = process.env.FOLDER_PATH || '/tmp/files_manager';
       const encodedString = formData.data;
+      delete formData.data;
       const decodedString = Buffer.from(encodedString, 'base64').toString('utf-8');
       const fileName = uuidv4();
       const localPath = `${filePath}/${fileName}`;
