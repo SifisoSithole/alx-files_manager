@@ -47,7 +47,8 @@ export default class FilesController {
     }
     formData.userId = userId;
     if (formData.type === 'folder') {
-      const folder = await fileCollection.insertOne(formData).ops[0];
+      let folder = await fileCollection.insertOne(formData);
+      folder = folder.ops[0];
       res.status(400).json({
         id: folder._id,
         userId: folder.userId,
@@ -67,7 +68,8 @@ export default class FilesController {
           res.status(400).json({ error: 'Failed to create' });
         } else {
           formData.localPath = localPath;
-          const file = await fileCollection.insertOne(formData).ops[0];
+          let file = await fileCollection.insertOne(formData);
+          file = file.ops[0];
           res.status(201).json({
             id: file._id,
             userId: file.userId,
