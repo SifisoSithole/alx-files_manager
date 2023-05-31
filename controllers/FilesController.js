@@ -1,16 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
-import Queue from 'bull/lib/queue';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
-import Queue from 'bull/lib/queue';
-
 
 const fs = require('fs');
 const { ObjectID } = require('mongodb');
 const mime = require('mime-types');
-const fileQueue = new Queue('thumbnail generation');
-
-const fileQueue = new Queue('thumbnail generation');
 
 export default class FilesController {
   static async postUpload(req, res) {
@@ -81,10 +75,6 @@ export default class FilesController {
           let file = await fileCollection.insertOne(formData);
           // eslint-disable-next-line
           file = file.ops[0];
-          if (file.type === 'image'){
-            const jobName = `Image thumbnail [${userId}-${fileId}]`;
-            fileQueue.add({ userId, fileId, name: jobName });
-          }
           res.status(201).json({
             id: file._id,
             userId: file.userId,
