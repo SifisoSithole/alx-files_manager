@@ -4,6 +4,8 @@ import redisClient from '../utils/redis';
 
 const fs = require('fs');
 const { ObjectID } = require('mongodb');
+const mime = require('mime-types');
+
 
 export default class FilesController {
   static async postUpload(req, res) {
@@ -157,7 +159,6 @@ export default class FilesController {
       {_id: new ObjectID(req.params.id), userId: user._id},
       {$set: {isPublic: true}}
     )
-    console.log(file.value);
     if (file.matchedCount === 1){
       file = await fileCollection.findOne({_id: new ObjectID(req.params.id)})
       res.status(200).json({
@@ -187,7 +188,6 @@ export default class FilesController {
       {_id: new ObjectID(req.params.id), userId: user._id},
       {$set: {isPublic: false}}
     )
-    console.log(file.value);
     if (file.matchedCount === 1){
       file = await fileCollection.findOne({_id: new ObjectID(req.params.id)})
       res.status(200).json({
@@ -201,5 +201,30 @@ export default class FilesController {
     } else {
       res.status(404).json({error: 'Not found'})
     }
+  }
+
+  static async getFile(req, res){
+    const fileCollection = dbClient.client.db().collection('files');
+    const file = await fileCollection.findOne({ _id: new ObjectID(req.params.id) })
+    if (!file) {
+      res.status(404).json({ error: 'Not found' });
+    }
+    if (!file.isPublic){
+      const token = req.headers['x-token'];
+      const userId = await redisClient.get(`auth_${token}`);
+      console.log(file.userId, userId)
+      if (file.userId.toString() !== userId){
+        res.status(404).json({ error: 'Not found' });
+        return
+      }
+    }
+    fs.readFile(file.localPath, 'utf-8', (err, data) => {
+      if (err){
+        res.status(404).json({ error: 'Not found' });
+        return
+      }
+      res.setHeader('Content-Type', mime.lookup(file.name))
+      res.status(200).send(data);
+    })
   }
 }
