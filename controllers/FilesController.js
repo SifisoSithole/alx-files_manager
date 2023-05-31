@@ -97,20 +97,20 @@ export default class FilesController {
     const documentId = new ObjectID(req.params.id);
     const fileCollection = dbClient.client.db().collection('files');
     const file = await fileCollection.findOne({ _id: documentId });
-    if (!file){
-      res.status(404).json({ error: 'Not found' })
+    if (!file) {
+      res.status(404).json({ error: 'Not found' });
     }
     res.status(200).json({
-        id: file._id,
-        userId: file.userId,
-        name: file.name,
-        type: file.type,
-        isPublic: file.isPublic,
-        parentId: file.parentId
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
     });
   }
 
-  static async getIndex(req, res){
+  static async getIndex(req, res) {
     const token = req.headers['x-token'];
     const userId = new ObjectID(await redisClient.get(`auth_${token}`));
     const collection = dbClient.client.db().collection('users');
@@ -119,28 +119,87 @@ export default class FilesController {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
-    const parentId = req.query.parentId
-    if (!parentId)
-      parentId = '0';
+    const { parentId } = req.query;
+    if (!parentId) parentId = '0';
     let page = req.query.page || '0';
     page = parseInt(page);
-    const noPages = 20
+    const noPages = 20;
     const fileCollection = dbClient.client.db().collection('files');
     const file = await fileCollection.find({ parentId: new ObjectID(parentId) })
       .skip(page * noPages)
       .limit(noPages)
-      .toArray()
+      .toArray();
     const files = [];
-    for (let i = 0; i < file.length; i++){
+    for (let i = 0; i < file.length; i++) {
       files.push({
         id: file[i]._id,
         userId: file[i].userId,
         name: file[i].name,
         type: file[i].type,
         isPublic: file[i].isPublic,
-        parentId: file[i].parentId
-      })
+        parentId: file[i].parentId,
+      });
     }
-    res.status(200).json(files)
+    res.status(200).json(files);
+  }
+
+  static async putPublish(req, res) {
+    const token = req.headers['x-token'];
+    const userId = new ObjectID(await redisClient.get(`auth_${token}`));
+    const collection = dbClient.client.db().collection('users');
+    const user = await collection.findOne({ _id: userId });
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    const fileCollection = dbClient.client.db().collection('files');
+    let file = await fileCollection.updateOne(
+      {_id: new ObjectID(req.params.id), userId: user._id},
+      {$set: {isPublic: true}}
+    )
+    console.log(file.value);
+    if (file.matchedCount === 1){
+      file = await fileCollection.findOne({_id: new ObjectID(req.params.id)})
+      res.status(200).json({
+        id: file._id,
+        userId: file.userId,
+        name: file.name,
+        type: file.type,
+        isPublic: file.isPublic,
+        parentId: file.parentId,
+      })
+    } else {
+      res.status(404).json({error: 'Not found'})
+    }
+  }
+
+  static async putUnpublish(req, res) {
+    const token = req.headers['x-token'];
+    const userId = new ObjectID(await redisClient.get(`auth_${token}`));
+    const collection = dbClient.client.db().collection('users');
+    const user = await collection.findOne({ _id: userId });
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    const fileCollection = dbClient.client.db().collection('files');
+    let file = await fileCollection.updateOne(
+      {_id: new ObjectID(req.params.id), userId: user._id},
+      {$set: {isPublic: false}}
+    )
+    console.log(file.value);
+    if (file.matchedCount === 1){
+      file = await fileCollection.findOne({_id: new ObjectID(req.params.id)})
+      res.status(200).json({
+        id: file._id,
+        userId: file.userId,
+        name: file.name,
+        type: file.type,
+        isPublic: file.isPublic,
+        parentId: file.parentId,
+      })
+    } else {
+      res.status(404).json({error: 'Not found'})
+    }
   }
 }
