@@ -6,7 +6,6 @@ const fs = require('fs');
 const { ObjectID } = require('mongodb');
 const mime = require('mime-types');
 
-
 export default class FilesController {
   static async postUpload(req, res) {
     const token = req.headers['x-token'];
@@ -51,6 +50,7 @@ export default class FilesController {
     formData.userId = userId;
     if (formData.type === 'folder') {
       let folder = await fileCollection.insertOne(formData);
+      // eslint-disable-next-line
       folder = folder.ops[0];
       res.status(400).json({
         id: folder._id,
@@ -73,6 +73,7 @@ export default class FilesController {
         } else {
           formData.localPath = localPath;
           let file = await fileCollection.insertOne(formData);
+          // eslint-disable-next-line
           file = file.ops[0];
           res.status(201).json({
             id: file._id,
@@ -121,9 +122,10 @@ export default class FilesController {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
-    const { parentId } = req.query;
+    let { parentId } = req.query;
     if (!parentId) parentId = '0';
     let page = req.query.page || '0';
+    // eslint-disable-next-line
     page = parseInt(page);
     const noPages = 20;
     const fileCollection = dbClient.client.db().collection('files');
@@ -132,7 +134,7 @@ export default class FilesController {
       .limit(noPages)
       .toArray();
     const files = [];
-    for (let i = 0; i < file.length; i++) {
+    for (let i = 0; i < file.length; i += 1) {
       files.push({
         id: file[i]._id,
         userId: file[i].userId,
@@ -156,11 +158,11 @@ export default class FilesController {
     }
     const fileCollection = dbClient.client.db().collection('files');
     let file = await fileCollection.updateOne(
-      {_id: new ObjectID(req.params.id), userId: user._id},
-      {$set: {isPublic: true}}
-    )
-    if (file.matchedCount === 1){
-      file = await fileCollection.findOne({_id: new ObjectID(req.params.id)})
+      { _id: new ObjectID(req.params.id), userId: user._id },
+      { $set: { isPublic: true } },
+    );
+    if (file.matchedCount === 1) {
+      file = await fileCollection.findOne({ _id: new ObjectID(req.params.id) });
       res.status(200).json({
         id: file._id,
         userId: file.userId,
@@ -168,9 +170,9 @@ export default class FilesController {
         type: file.type,
         isPublic: file.isPublic,
         parentId: file.parentId,
-      })
+      });
     } else {
-      res.status(404).json({error: 'Not found'})
+      res.status(404).json({ error: 'Not found' });
     }
   }
 
@@ -185,11 +187,11 @@ export default class FilesController {
     }
     const fileCollection = dbClient.client.db().collection('files');
     let file = await fileCollection.updateOne(
-      {_id: new ObjectID(req.params.id), userId: user._id},
-      {$set: {isPublic: false}}
-    )
-    if (file.matchedCount === 1){
-      file = await fileCollection.findOne({_id: new ObjectID(req.params.id)})
+      { _id: new ObjectID(req.params.id), userId: user._id },
+      { $set: { isPublic: false } },
+    );
+    if (file.matchedCount === 1) {
+      file = await fileCollection.findOne({ _id: new ObjectID(req.params.id) });
       res.status(200).json({
         id: file._id,
         userId: file.userId,
@@ -197,34 +199,34 @@ export default class FilesController {
         type: file.type,
         isPublic: file.isPublic,
         parentId: file.parentId,
-      })
+      });
     } else {
-      res.status(404).json({error: 'Not found'})
+      res.status(404).json({ error: 'Not found' });
     }
   }
 
-  static async getFile(req, res){
+  static async getFile(req, res) {
     const fileCollection = dbClient.client.db().collection('files');
-    const file = await fileCollection.findOne({ _id: new ObjectID(req.params.id) })
+    const file = await fileCollection.findOne({ _id: new ObjectID(req.params.id) });
     if (!file) {
       res.status(404).json({ error: 'Not found' });
     }
-    if (!file.isPublic){
+    if (!file.isPublic) {
       const token = req.headers['x-token'];
       const userId = await redisClient.get(`auth_${token}`);
-      console.log(file.userId, userId)
-      if (file.userId.toString() !== userId){
+      console.log(file.userId, userId);
+      if (file.userId.toString() !== userId) {
         res.status(404).json({ error: 'Not found' });
-        return
+        return;
       }
     }
     fs.readFile(file.localPath, 'utf-8', (err, data) => {
-      if (err){
+      if (err) {
         res.status(404).json({ error: 'Not found' });
-        return
+        return;
       }
-      res.setHeader('Content-Type', mime.lookup(file.name))
+      res.setHeader('Content-Type', mime.lookup(file.name));
       res.status(200).send(data);
-    })
+    });
   }
 }
